@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import gtsam
 import numpy as np
+from scipy.linalg import block_diag
 
 from graphslam.config import SlamConfig
 
@@ -67,7 +68,7 @@ def predict_pose(previous_pose: gtsam.Pose2, relative_pose: gtsam.Pose2) -> gtsa
         The predicted pose x_k.
     """
     # TODO(c1): compose the relative pose onto the previous pose.
-    raise NotImplementedError("Task 1 (c1)")
+    return previous_pose.compose(relative_pose)
 
 
 def add_odometry_factor(
@@ -91,8 +92,9 @@ def add_odometry_factor(
         Covariance of that increment, in the tangent space of ``relative_pose``.
     """
     # TODO(c2): add a BetweenFactorPose2 with a full-covariance Gaussian noise model.
-    raise NotImplementedError("Task 1 (c2)")
-
+    cov = gtsam.noiseModel.Gaussian.Covariance(relative_pose_cov)
+    factor = gtsam.BetweenFactorPose2(key_previous, key_current, relative_pose, cov)
+    graph.add(factor)
 
 def add_landmark_factor(
     graph: gtsam.NonlinearFactorGraph,
@@ -116,8 +118,11 @@ def add_landmark_factor(
         From :func:`bearing_range_noise_model`, ordered [bearing, range].
     """
     # TODO(c3): add a BearingRangeFactor2D. Mind the argument order.
-    raise NotImplementedError("Task 1 (c3)")
-
+    bearing = gtsam.Rot2(measurement[1])
+    distance = measurement[0]
+    factor = gtsam.BearingRangeFactor2D(pose_key,landmark_key, bearing, distance, noise_model)
+    
+    graph.add(factor)
 
 # ---------------------------------------------------------------------------
 # Task 1 (d): the measurement model and its Jacobians
@@ -147,7 +152,22 @@ def predict_measurement(
         d z / d m_j.
     """
     # TODO(d): predict [range, bearing] and stack the two rows of each Jacobian.
-    raise NotImplementedError("Task 1 (d)")
+    H_range_pose = np.zeros((1, 3), order="F")
+    H_bearing_pose = np.zeros((1, 3), order="F")
+    H_range_landmark = np.zeros((1, 2), order="F")
+    H_bearing_landmark = np.zeros((1, 2), order="F")
+
+    distance = pose.range(landmark, H_range_pose, H_range_landmark)
+    bearing = pose.bearing(landmark, H_bearing_pose, H_bearing_landmark).theta()
+
+    print(distance)
+    print(bearing)
+
+    H_pose = np.vstack((H_range_pose, H_bearing_pose))
+    H_landmark = np.vstack((H_range_landmark, H_bearing_landmark))
+
+    return np.array([distance, bearing]), H_pose, H_landmark
+
 
 
 def inverse_measurement(pose: gtsam.Pose2, measurement: np.ndarray) -> np.ndarray:
@@ -165,8 +185,16 @@ def inverse_measurement(pose: gtsam.Pose2, measurement: np.ndarray) -> np.ndarra
     np.ndarray, shape=(2,)
         Landmark position in the world frame.
     """
+    point = gtsam.Point2(measurement[0], 0.0)
+    angle = gtsam.Rot2(measurement[1])
+    point_b = angle.rotate(point)
+    point_w = pose.transformFrom(point_b)
+
+    return point_w
+
+    
+    
     # TODO(g): rotate by the bearing, translate by the range, map to the world frame.
-    raise NotImplementedError("Task 1 (g)")
 
 
 # ---------------------------------------------------------------------------
@@ -194,8 +222,13 @@ def assemble_joint_covariance(
     np.ndarray, shape=(3 + 2n, 3 + 2n)
         P, whose block (i, j) is the covariance between ``keys[i]`` and ``keys[j]``.
     """
+    n = len(keys) - 1 # Number of landmarks
+    
+    P = np.block([[joint_marginal.at(i,j) for j in keys] for i in keys])
+    
     # TODO(e): fill P block by block from joint_marginal.at(key_i, key_j).
-    raise NotImplementedError("Task 1 (e)")
+
+    return P
 
 
 # ---------------------------------------------------------------------------
@@ -228,8 +261,21 @@ def innovation_covariance(
     np.ndarray, shape=(2n, 2n)
         The innovation covariance ``S``.
     """
-    # TODO(f): build the stacked H, build the block-diagonal R, and form S.
-    raise NotImplementedError("Task 1 (f)")
+    n = len(jacobians_pose)
+    if n == 0:
+        return np.zeros((0, 0))
+    
+    H_1x = np.vstack(jacobians_pose)
+    H_rest = block_diag(*jacobians_landmark)
+
+    H = np.hstack((H_1x, H_rest))
+
+    R = np.kron(np.eye(n), measurement_cov)
+    S = H@joint_covariance@H.T + R
+
+    return S
+    # TODO(f): build the stacked H, build the block-diagonal R, and form S. 
+    
 
 
 # ---------------------------------------------------------------------------

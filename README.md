@@ -6,6 +6,26 @@ Park lidar dataset.
 
 ## Setup
 
+Install UV:
+
+```bash
+uv sync
+```
+
+Activate the environment:
+
+**macOS/Linux**
+
+```bash
+source .venv/bin/activate
+```
+
+**Windows (PowerShell)**
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
 Install [Miniconda](https://www.anaconda.com/download) — the minimal installer,
 **not** the full Anaconda Distribution, and not "whatever conda you already
 have". Then, from this directory:
