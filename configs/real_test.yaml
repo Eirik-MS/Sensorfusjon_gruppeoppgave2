@@ -15,13 +15,13 @@ sensor:                          # sensor limits, not tuning values
   range_local: 55.0              # local map offered to association: reach plus a margin
   bearing_local_deg: 100.0
 tentative:                       # landmark birth: seen in M of the last N steps
-  M: 3                           # TODO tune
-  N: 4                           # TODO tune
-  gate: 0.2                      # TODO tune: matching distance [m]
+  M: 2                           # TODO tune
+  N: 6                           # TODO tune
+  gate: 0.8                      # TODO tune: matching distance [m]
 association:
   method: jcbb
-  alpha_individual: 0.9999       # TODO tune: a confidence; closer to 1 is a looser gate
-  alpha_joint: 0.9999            # TODO tune: a confidence; closer to 1 is a looser gate
+  alpha_individual: 0.99       # TODO tune: a confidence; closer to 1 is a looser gate
+  alpha_joint: 0.99            # TODO tune: a confidence; closer to 1 is a looser gate
   inject_wrong_at_step: null
 backend:
   solver: isam2
