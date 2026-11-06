@@ -160,8 +160,8 @@ def predict_measurement(
     distance = pose.range(landmark, H_range_pose, H_range_landmark)
     bearing = pose.bearing(landmark, H_bearing_pose, H_bearing_landmark).theta()
 
-    print(distance)
-    print(bearing)
+    ##print(distance)
+    ##print(bearing)
 
     H_pose = np.vstack((H_range_pose, H_bearing_pose))
     H_landmark = np.vstack((H_range_landmark, H_bearing_landmark))
